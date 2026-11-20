@@ -6,6 +6,7 @@ router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
+@router.head("/health")
 def health(settings: SettingsDep) -> dict[str, str]:
     """Liveness: is the process alive? Instant. Never touches the DB or the LLM."""
     return {
