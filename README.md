@@ -2,7 +2,14 @@
 
 An AI-powered Spring Boot assistant that answers configuration and migration questions using official reference documentation and release notes.
 
-**Status:** Day 1 foundation (FastAPI skeleton, quality gates). Live URL from Day 5.
+[![CI](https://github.com/sivasuriya2811/prince28-dev05-springscout/actions/workflows/ci.yml/badge.svg)](https://github.com/sivasuriya2811/prince28-dev05-springscout/actions/workflows/ci.yml)
+[![Live](https://img.shields.io/website?url=https%3A%2F%2Fspringscout.onrender.com%2Fhealth&label=live)](https://springscout.onrender.com/docs)
+[![Uptime (30 days)](https://img.shields.io/uptimerobot/ratio/m804746080-c19543a84c22a7b8e4cb3663)](https://springscout.onrender.com/health)
+
+**Live:** https://springscout.onrender.com · [API docs](https://springscout.onrender.com/docs) · [health](https://springscout.onrender.com/health)
+
+
+**Status:** Week 1 complete · live at https://springscout.onrender.com
 
 ## Who it's for
 

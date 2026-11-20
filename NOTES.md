@@ -166,3 +166,38 @@ TOTAL                                 254     15     26      2    92%
 
 Two files or lines my coverage report says are never run, and whether they matter: (2 lines)
 Look at the Missing column in your coverage table—for example, src/springscout/main.py (the if __name__ == "__main__": or startup error branches) or CLI/seed helpers in scripts/ may show uncovered lines. Startup entrypoints don't matter much for unit tests since Uvicorn runs the app directly, whereas uncovered error-handling paths in API routes do matter and are worth testing later.
+
+
+
+## D05 · CI/CD and going live
+
+- Live URL: https://springscout.onrender.com
+- CI run for pull request 1: https://github.com/sivasuriya2811/prince28-dev05-springscout/actions (paste the direct URL to **CI #2** from your Actions list)
+- First deploy that ran by itself: (paste the direct URL to **CD #2** from your Actions list)
+- Merge clicked at 14:36 → "Smoke test passed" at 14:38 → lead time: ~2 min (1m 5s CI + 53s CD)
+
+### Smoke test output from that CD run
+
+```text
+ok /health -> 200, version 4c0bcd27f3df48be9006bc4231e6f636e6faaa91
+ok /ready -> 200, {'status': 'ready', 'checks': {'database': True}}
+ok /v1/documents?limit=1 -> 200
+Smoke test passed
+```
+
+### Rollback drill
+
+- Rolled back to sha c45bedefef21ff1a37da86ef2cee27ec09446471 : started 15:11, smoke passed 15:12 (~0.8 min / 48s)
+- Rolled forward to sha 67f04eca579c4fa7cd322a6d0cecf0b952285425 : ~0.8 min (47s)
+- During the rollback, the database stayed on the newer schema. Why is that safe here?
+  Our Alembic migrations are backward-compatible (additive changes only—no columns or tables were dropped or destructively altered), so the older application code can still read and write safely against the newer schema. Additionally, rolling back skips re-running migrations, avoiding any schema conflicts or data loss.
+
+### Where my secrets live
+
+- Neon string: GitHub Secret DATABASE_URL + Render environment. Not in Git, not in the image.
+- Render deploy hook: GitHub Secret RENDER_DEPLOY_HOOK only.
+
+### Monitoring
+
+- UptimeRobot checks /health every 5 minutes; alerts go to my email.
+- One thing that would make my live app faster on its first request: Upgrading Render from the Free tier to an always-on paid instance (Starter or above) so the container never spins down to sleep after 15 minutes of inactivity.
