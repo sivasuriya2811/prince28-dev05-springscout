@@ -39,6 +39,7 @@ jobs:
           enable-cache: true
       - run: uv sync --locked
       - run: uv run poe lint
+      - run: uv run pre-commit run --all-files
       - name: Unit + integration tests with coverage
         run: uv run poe cov
 

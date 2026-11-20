@@ -201,3 +201,16 @@ Smoke test passed
 
 - UptimeRobot checks /health every 5 minutes; alerts go to my email.
 - One thing that would make my live app faster on its first request: Upgrading Render from the Free tier to an always-on paid instance (Starter or above) so the container never spins down to sleep after 15 minutes of inactivity.
+
+
+When is a human approval gate worth the delay?
+A human approval gate is worth the delay in high-stakes or regulated production environments (such as healthcare, finance, or large database schema changes) where an automated deploy could cause irreversible data loss, compliance violations, or major customer disruption, or when coordinating releases with support/marketing teams
+
+
+
+### Change lead time (DORA metric)
+- Run 1 (`CD #2`): CI `1m 05s` + CD `53s` = `1m 58s`
+- Run 2 (`CD #3`): CI `1m 17s` + CD `1m 12s` = `2m 29s`
+- Run 3 (`CD #8`): CI `1m 14s` + CD `57s` = `2m 11s`
+- Average change lead time (merge -> `Smoke test passed`): **2m 13s (~2.2 min)**
+- Slowest step: Post-deploy smoke test waiting for Render container spin-up and traffic switchover (~30–45s), followed by the Docker image build/push in CI.
