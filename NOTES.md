@@ -214,3 +214,55 @@ A human approval gate is worth the delay in high-stakes or regulated production 
 - Run 3 (`CD #8`): CI `1m 14s` + CD `57s` = `2m 11s`
 - Average change lead time (merge -> `Smoke test passed`): **2m 13s (~2.2 min)**
 - Slowest step: Post-deploy smoke test waiting for Render container spin-up and traffic switchover (~30–45s), followed by the Docker image build/push in CI.
+
+## Day 06 — Document Acquisition & Manifest Logbook
+
+### 1. Site Rules & Licences
+- **Spring Boot Docs (`docs.spring.io`):** `robots.txt` allows automated crawling (`Allow: /`). Documentation and source code are licensed under **Apache-2.0**, permitting downloading, local storage, and displaying snippets with attribution.
+- **GitHub (`github.com`):** `robots.txt` disallows scraping `/*/tree/` and `/*/blob/` web routes, so repository docs are fetched via Git (`scripts/fetch.py repo`) rather than HTML scraping.
+
+### 2. Kill It and Resume (Idempotency Check)
+- **Run 1 (interrupted via `Ctrl+C`):** `5` files downloaded before interruption (no leftover `.part` files in `data/raw/`).
+- **Run 2 (resumed):** `sources=10 downloaded=5 skipped=5 blocked=0 failed=0` (`seconds=4.6`)
+- **Run 3 (re-run):** `sources=10 downloaded=0 skipped=10 blocked=0 failed=0` (`seconds=0.4`)
+
+### 3. Corpus Summary
+- **Door 1 (`urls`):** 10 Spring Boot 4.2.0 reference pages downloaded to `data/raw/spring-boot-docs/`.
+- **Door 2 (`repo`):** Cloned `.adoc` documentation files from `spring-projects/spring-boot` and logged all entries with SHA-256 hashes, timestamps, and licence metadata in `data/manifest.jsonl`.
+
+
+
+## D06 · Collecting the corpus
+
+- Start target: Spring Boot reference for the current version
+- Collected today: 173 files, 678 pages, 3.4 MB (from DATASET.md)
+- Doors used: URL list / Git repository
+
+### Licence check
+
+| Source | Licence or terms, in my words | May I show full text in answers? |
+|---|---|---|
+| `docs.spring.io` (Spring Boot reference) | Apache-2.0 open source licence; permits downloading, storing, and quoting with attribution and link to original doc. | Yes, with attribution/link (in practice we show concise grounded snippets with source links). |
+| `://github.com` | Apache-2.0 repository docs; permits cloning and redistribution under Apache-2.0 terms. | Yes, with attribution/link under Apache-2.0. |
+
+### robots.txt
+
+- Site: `docs.spring.io` (`spring.io/robots.txt`) and `://github.com`. Its robots.txt says (2 lines): `spring.io/robots.txt` allows all crawlers (`User-agent: *` / `Allow: /`), whereas `://github.com` disallows scraping `/*/tree/` and `/*/blob/` paths.
+- Was anything blocked for my bot? What did I do about it? Nothing was blocked on `docs.spring.io`; for GitHub, instead of scraping HTML blob/tree pages, I used Door 2 (`scripts/fetch.py repo`) to shallow-clone the `.adoc` documentation folder directly via Git.
+
+### Kill and resume
+
+- Run 1: I pressed Ctrl+C after 5 files
+- Run 2: downloaded=5 skipped=5
+- Run 3: downloaded=0 skipped=10
+
+### Capacity (from docs/CAPACITY.md)
+
+- Tokens per page, measured: 750
+- Full corpus: 3.0 M tokens, 6000 chunks, embedding about Rs 80, vectors 36 MB
+- The number that surprised me most, and why (2 lines):
+  Even 173 documentation files already equal 678 pages and over 508,000 tokens, yet the full 4,000-page corpus will cost less than Rs 100 to embed. Storage and embedding API cost are tiny, so retrieval quality and filtering noisy redirect/navigation files matter far more than raw cost.
+
+### One thing that went wrong today, and how I fixed it
+
+Running `scripts/fetch.py repo` initially failed because the destination directory `data/raw/spring-boot-docs` already existed from Door 1 (`urls`). I fixed it by passing a separate `--source spring-boot-repo` flag so Git cloned cleanly into `data/raw/spring-boot-repo`.

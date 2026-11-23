@@ -1,0 +1,11 @@
+url,source,licence,title
+https://docs.spring.io/spring-boot/reference/using/auto-configuration.html,spring-boot-docs,Apache-2.0,Auto-configuration
+https://docs.spring.io/spring-boot/reference/features/external-config.html,spring-boot-docs,Apache-2.0,Externalized Configuration
+https://docs.spring.io/spring-boot/reference/features/profiles.html,spring-boot-docs,Apache-2.0,Profiles
+https://docs.spring.io/spring-boot/reference/features/logging.html,spring-boot-docs,Apache-2.0,Logging
+https://docs.spring.io/spring-boot/reference/web/servlet.html,spring-boot-docs,Apache-2.0,Servlet Web Applications
+https://docs.spring.io/spring-boot/reference/web/spring-security.html,spring-boot-docs,Apache-2.0,Spring Security
+https://docs.spring.io/spring-boot/reference/data/sql.html,spring-boot-docs,Apache-2.0,SQL Databases
+https://docs.spring.io/spring-boot/reference/testing/spring-boot-applications.html,spring-boot-docs,Apache-2.0,Testing Spring Boot Applications
+https://docs.spring.io/spring-boot/reference/packaging/container-images/dockerfiles.html,spring-boot-docs,Apache-2.0,Dockerfiles
+https://docs.spring.io/spring-boot/reference/actuator/endpoints.html,spring-boot-docs,Apache-2.0,Actuator Endpoints
