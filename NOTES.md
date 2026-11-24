@@ -266,3 +266,73 @@ A human approval gate is worth the delay in high-stakes or regulated production 
 ### One thing that went wrong today, and how I fixed it
 
 Running `scripts/fetch.py repo` initially failed because the destination directory `data/raw/spring-boot-docs` already existed from Door 1 (`urls`). I fixed it by passing a separate `--source spring-boot-repo` flag so Git cloned cleanly into `data/raw/spring-boot-repo`.
+
+## D07 · Parser comparison
+
+<!-- parsers:start -->
+| File | Parsers (A / B) | Pages | A found | B found | Time (A / B) | Better, why |
+|---|---|---|---|---|---|---|
+| spring-boot-applications-31a2e068.html | trafilatura / strip tags | 42 | 104,485 chars, 21 headings, 0 tables | 113,696 chars, 0 headings, 0 tables | 0.27 s / 0.02 s | |
+| external-config-aee8bfb6.html | trafilatura / strip tags | 30 | 77,880 chars, 24 headings, 7 tables | 86,098 chars, 0 headings, 0 tables | 0.29 s / 0.01 s | |
+| endpoints-7b479a44.html | trafilatura / strip tags | 22 | 56,673 chars, 11 headings, 12 tables | 64,965 chars, 0 headings, 0 tables | 0.23 s / 0.01 s | |
+| servlet-6c234e8f.html | trafilatura / strip tags | 22 | 56,535 chars, 8 headings, 1 tables | 65,661 chars, 0 headings, 0 tables | 0.13 s / 0.01 s | |
+| logging-807673cf.html | trafilatura / strip tags | 14 | 35,799 chars, 9 headings, 11 tables | 44,723 chars, 0 headings, 0 tables | 0.12 s / 0.01 s | |
+| sql-cd1ef566.html | trafilatura / strip tags | 14 | 34,989 chars, 8 headings, 0 tables | 44,825 chars, 0 headings, 0 tables | 0.17 s / 0.01 s | |
+| profiles-e1770497.html | trafilatura / strip tags | 3 | 6,551 chars, 5 headings, 0 tables | 16,337 chars, 2 headings, 0 tables | 0.07 s / 0.00 s | |
+| spring-security-75be5256.html | trafilatura / strip tags | 3 | 6,579 chars, 5 headings, 0 tables | 16,553 chars, 0 headings, 0 tables | 0.07 s / 0.00 s | |
+| dockerfiles-6850a7f0.html | trafilatura / strip tags | 3 | 6,986 chars, 3 headings, 0 tables | 17,032 chars, 38 headings, 0 tables | 0.05 s / 0.00 s | |
+| auto-configuration-b6fc716e.html | trafilatura / strip tags | 2 | 3,347 chars, 4 headings, 0 tables | 13,381 chars, 0 headings, 0 tables | 0.06 s / 0.00 s | |
+<!-- parsers:end -->
+
+
+
+## D07 — Parser comparison
+
+<!-- BEGIN D07_COMPARE -->
+
+| File | Parsers | Pages | Output (primary vs secondary) | Time | Winner & why |
+| :--- | :--- | :---: | :--- | :---: | :--- |
+| `external-config-ace0bfb6.html` | trafilatura / strip_tags | 30 | 77,880 chars, 24 headings, 7 tables \| 86,098 chars, 0 headings, 0 tables | 0.29 s / 0.01 s | **trafilatura**: preserved 24 headings & 7 tables; stripped ~8.2k chars of nav/footer boilerplate (0.29s is negligible). |
+| `endpoints-7b479a44.html` | trafilatura / strip_tags | 22 | 56,673 chars, 11 headings, 12 tables \| 64,965 chars, 0 headings, 0 tables | 0.23 s / 0.01 s | **trafilatura**: captured 11 headings & 12 tables vs. 0 for strip_tags; stripped ~8.3k chars of page chrome (0.23s). |
+| `servlet-6c234e0f.html` | trafilatura / strip_tags | 22 | 56,535 chars, 8 headings, 1 tables \| 65,661 chars, 0 headings, 0 tables | 0.13 s / 0.01 s | **trafilatura**: preserved 8 headings & 1 table; removed ~9.1k chars of navigation boilerplate (0.13s). |
+| `logging-807673cf.html` | trafilatura / strip_tags | 14 | 35,799 chars, 9 headings, 11 tables \| 44,723 chars, 0 headings, 0 tables | 0.12 s / 0.01 s | **trafilatura**: kept 9 headings & 11 tables (verified clean `["Logging", ...]` section paths in DB); stripped ~8.9k chars of nav (0.12s). |
+| `sql-cd1ef566.html` | trafilatura / strip_tags | 14 | 34,989 chars, 8 headings, 0 tables \| 44,825 chars, 0 headings, 0 tables | 0.17 s / 0.01 s | **trafilatura**: preserved 8 headings vs. 0; filtered out ~9.8k chars of sidebar/footer boilerplate (0.17s). |
+| `profiles-e1770497.html` | trafilatura / strip_tags | 3 | 6,551 chars, 5 headings, 0 tables \| 16,337 chars, 2 headings, 0 tables | 0.07 s / 0.00 s | **trafilatura**: kept 5 clean section headings vs. 2 noisy ones; stripped ~9.8k chars of nav junk (0.07s). |
+| `spring-security-75be5256.html` | trafilatura / strip_tags | 3 | 6,579 chars, 5 headings, 0 tables \| 16,553 chars, 0 headings, 0 tables | 0.07 s / 0.00 s | **trafilatura**: preserved 5 headings; removed ~10k chars of header/sidebar HTML noise (0.07s). |
+| `dockerfiles-685a07f0.html` | trafilatura / strip_tags | 3 | 6,986 chars, 3 headings, 0 tables \| 17,032 chars, 38 headings, 0 tables | 0.05 s / 0.00 s | **trafilatura**: isolated 3 true content headings instead of 38 nav/menu headings from strip_tags (0.05s). |
+| `auto-configuration-b6fc716e.html` | trafilatura / strip_tags | 2 | 3,347 chars, 4 headings, 0 tables \| 13,381 chars, 0 headings, 0 tables | 0.06 s / 0.00 s | **trafilatura**: kept 4 clean section headings; stripped ~10k chars of site navigation boilerplate (0.06s). |
+<!-- END D07_COMPARE -->
+
+### What looks wrong / corpus observations
+- **Duplicate sources (`.adoc` vs `.html`):** Some Spring Boot topics (e.g., *Externalized Configuration*) were ingested in both raw AsciiDoc and rendered HTML formats. The `.adoc` versions leave raw macros like `[[features.external-config]]`, `xref:...`, and `javadoc:...` in the extracted page text, whereas the `.html` versions parsed by `trafilatura` produce clean prose (`@Value`, `Environment`).
+- **Callout boxes rendered as empty table pipes:** In HTML pages like *Externalized Configuration* (page 2), callout/note blocks convert into empty Markdown table cells (`| | ... | |`).
+- **Speed vs. quality trade-off:** `trafilatura` takes ~0.05–0.29s per file compared to ~0.01s for `strip_tags`, which is easily acceptable for offline ingestion across 173 files given the massive improvement in heading hierarchy, table extraction, and boilerplate removal.
+
+
+### D07 · Parsing my corpus
+
+- Files in the manifest: 173 · parsed: 173 · failed: 0 · pages in Postgres: 700
+- Parsing coverage: 100% of files
+
+### Failures by reason
+
+| Reason | Files | What I did |
+|---|---|---|
+| none | 0 | All 173 manifest files parsed cleanly on the first run with zero failures |
+
+- The one I fixed: file none (0 failures across all 173 files), reason N/A, fix: verified all 173 files parsed cleanly into 700 pages in Postgres.
+
+### What I saw when I read my parsed pages
+
+- A page where the heading path is right (document, page, path): **Externalized Configuration**, page 3, `["Externalized Configuration", "JSON Application Properties"]` (and **Logging**, page 2, `["Logging", "Configure Logback for Logging"]`).
+- Something that came out wrong (document, page, what): **Externalized Configuration**, page 1 & 2 — raw AsciiDoc files (`.adoc`) were ingested alongside `.html` versions and left raw macros (`[[features.external-config]]`, `xref:...`, `javadoc:...`) in the extracted text; also, HTML callout boxes rendered as empty Markdown table pipes (`| | ... | |`) on page 2.
+- A table: Markdown grid or loose text? (document, page): **Markdown grid** — e.g., **Externalized Configuration** (`external-config-ace0bfb6.html`) extracted 7 structured Markdown tables (and `endpoints-7b479a44.html` extracted 12 tables) using `trafilatura`, whereas `strip_tags` flattened them into loose text (`0 tables`).
+
+### My parser choice
+
+- For HTML/docs I use **trafilatura** (and **PyMuPDF** for PDFs) because `trafilatura` preserved full section heading hierarchies and Markdown tables (e.g., `24 headings, 7 tables` on `external-config-ace0bfb6.html` and `11 headings, 12 tables` on `endpoints-7b479a44.html` vs. `0 headings, 0 tables` for `strip_tags`) while stripping ~8–10k characters of navigation/footer boilerplate per file in `0.05–0.29s`.
+- A kind of document in my corpus that neither parser handles well: **Raw AsciiDoc (`.adoc`) source files containing custom Spring macros (`xref:`, `javadoc:`, `[[anchor]]`)** and **HTML callout/admonition boxes**, which render with raw macro syntax or empty Markdown table cells (`| |`).
+
+### One thing that went wrong today, and how I fixed it
+
+- `uv run poe lint` failed on `ruff format --check` due to spacing/formatting in `src/springscout/db/models.py`; fixed it by running `uv run ruff format` and re-running `uv run poe lint` until all 44 files passed.
