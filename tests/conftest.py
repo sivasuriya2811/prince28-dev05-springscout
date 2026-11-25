@@ -45,6 +45,12 @@ def db_state():
 
 
 class FakeUsage:
+    def __init__(self, spent: float = 0.0642) -> None:
+        self.spent = spent
+
+    async def today_cost_inr(self) -> float:
+        return self.spent
+
     async def by_day(self, days=7):
         return [
             {
@@ -54,8 +60,34 @@ class FakeUsage:
                 "fallbacks": 1,
                 "tokens_in": 300,
                 "tokens_out": 120,
-                "cost_inr": 0.0642,
+                "cost_inr": self.spent,
             }
+        ]
+
+    async def by_model(self, days=7):
+        return [
+            {
+                "provider": "gemini",
+                "model": "gemini-3.5-flash-lite",
+                "calls": 2,
+                "errors": 0,
+                "fallbacks": 0,
+                "avg_latency_ms": 1850.0,
+                "tokens_in": 200,
+                "tokens_out": 80,
+                "cost_inr": 0.0542,
+            },
+            {
+                "provider": "groq",
+                "model": "openai/gpt-oss-20b",
+                "calls": 1,
+                "errors": 0,
+                "fallbacks": 1,
+                "avg_latency_ms": 1120.0,
+                "tokens_in": 100,
+                "tokens_out": 40,
+                "cost_inr": 0.01,
+            },
         ]
 
 

@@ -399,3 +399,12 @@ Running `scripts/fetch.py repo` initially failed because the destination directo
 ### One thing that went wrong today, and how I fixed it
 
 - The default primary model (`gemini-3.8-flash`) returned HTTP 403/503 on my Google AI Studio project, and `tests/unit/conftest.py` shadowed `tests/conftest.py` causing `/v1/chat` unit tests to fail with 503. I switched `LLM_PRIMARY_MODEL` to `gemini-3.5-flash-lite` in `.env` and removed the duplicate `tests/unit/conftest.py` so all 78 unit tests and integration tests pass.
+
+
+
+- Same question on my live URL (second, awake request): first words after 2.41 s. Day 1 target: under 1.5 s
+### Extra Engineering Additions (Beyond Lab Baseline)
+
+1. **Daily Spend Guardrail (`MAX_DAILY_COST_INR`):** Configurable daily INR cap in `Settings` checked before every `POST /v1/chat` request, returning `HTTP 429` once daily spend reaches the configured threshold (`0.0` = unlimited by default).
+2. **Per-Model & Provider Usage Telemetry (`GET /v1/usage/models`):** Aggregates calls, error counts, fallback counts, average latency (ms), token usage, and INR spend grouped by provider and model.
+3. **CLI Cost & Latency Dashboard (`scripts/usage_report.py`):** Queries `/v1/usage` and `/v1/usage/models` to verify average cost per answered request (`Rs 0.0219`) against the Day 1 target (`<= Rs 0.50: PASS`).

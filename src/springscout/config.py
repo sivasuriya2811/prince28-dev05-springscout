@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     llm_timeout_seconds: float = 30.0
     usd_inr: float = 95.0  # rupees per US dollar, for cost estimates
     prompts_dir: Path = Path("prompts")
+    max_daily_cost_inr: float = (
+        0.0  # 0.0 = unlimited; > 0 blocks /v1/chat once daily spend hits cap
+    )
 
     @field_validator("database_url")
     @classmethod
