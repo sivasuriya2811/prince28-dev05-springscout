@@ -336,3 +336,66 @@ Running `scripts/fetch.py repo` initially failed because the destination directo
 ### One thing that went wrong today, and how I fixed it
 
 - `uv run poe lint` failed on `ruff format --check` due to spacing/formatting in `src/springscout/db/models.py`; fixed it by running `uv run ruff format` and re-running `uv run poe lint` until all 44 files passed.
+
+
+
+# Day 08 — LLM Gateway & Billing Notes
+
+## 1. Latency & Cost Baseline (`POST /v1/chat`)
+- **Primary provider/model:** `gemini` / `gemini-3.5-flash-lite`
+- **Fallback provider/model:** `groq` / `openai/gpt-oss-20b`
+- **Sample domain query:** `"How do I configure a datasource connection pool in Spring Boot?"`
+  - **Streaming:** first words after `1.65 s`, total `8.31 s` (`tokens in=171`, `out=190`, `cost=Rs 0.049998`, `attempts=1`, `fallback=no`)
+  - **Non-streaming (`--json`):** total `9.29 s` (`tokens in=171`, `out=158`, `cost=Rs 0.042398`, `attempts=1`, `fallback=no`)
+  - **Takeaway:** Streaming feels ~5.6x faster to the user (`1.65 s` TTFT vs `9.29 s` full wait) even when total generation time is similar.
+
+## 2. Token Efficiency: English vs. Tamil
+- **Baseline (`"Hi"`):** `160` input tokens (system prompt + minimal greeting)
+- **English (`"Explain in one sentence what a refund is."`):** `168` input tokens -> **`8` message tokens** (`168 - 160`)
+- **Tamil (`"பணத்தைத் திரும்பப் பெறுதல் என்றால் என்ன என்பதை ஒரு வாக்கியத்தில் விளக்கவும்."`):** `176` input tokens -> **`16` message tokens** (`176 - 160`)
+- **Multiplier:** Tamil required **`2.0x`** as many input tokens as the exact same sentence in English (`16 / 8`), directly increasing input cost on non-English queries.
+
+## 3. Guardrails & Hallucination Evidence (Before Retrieval)
+- **Unanswerable internal question (`"Why does our client's app fail in their UAT environment?"`):**
+  - *Output:* `"That question is outside this product's subject, as SpringScout only answers Spring Boot configuration and migration questions."`
+- **Off-topic question (`"Who won the 2011 cricket world cup?"`):**
+  - *Output:* `"That question is outside this product's subject."`
+- **Why RAG / Week 3 is needed:** Without document retrieval (`sample_records.json`), the model answers general Spring Boot questions from pretraining memory (defaulting to generic MySQL/HikariCP examples) and cannot cite internal SpringScout records or distinguish organization-specific guidelines/circulars.
+
+
+
+### D08 · LLM gateway
+
+- Primary: gemini-3.5-flash-lite (Gemini) · fallback: openai/gpt-oss-20b (Groq)
+- First question on my laptop: first words after 1.65 s, total 8.31 s, tokens in 171 / out 190, cost Rs 0.049998
+- Same question on my live URL (second, awake request): first words after ___ s. Day 1 target: under 1.5 s
+
+### Tokens: English against Tamil
+
+| Message | tokens in |
+|---|---|
+| "Hi" (baseline: mostly my system prompt) | 160 |
+| The English sentence | 168 |
+| The same sentence in Tamil | 176 |
+
+- The Tamil message needs about 2.0 times the tokens of the English one.
+
+### What the model does without my documents
+
+- Question 6 ("Why does our client's app fail in their UAT environment?"): did it admit it can't know? Its exact words: Yes, it declined — "That question is outside this product's subject, as SpringScout only answers Spring Boot configuration and migration questions."
+- A detail it got wrong or invented (question → what it said → what is true): "How do I configure a datasource connection pool in Spring Boot?" → It invented a generic MySQL configuration (`jdbc:mysql://localhost:3306/mydb`, `com.mysql.cj.jdbc.Driver`) → SpringScout uses PostgreSQL (`asyncpg` / `postgresql`) and has no ingested Spring Boot config docs yet (showing why retrieval in Week 3 is needed).
+- The off-topic question: did it decline in one sentence? Yes — "That question is outside this product's subject."
+
+### Fallback and circuit breaker
+
+- With the primary broken: provider groq , fallback YES , first words after 6.82 s (and 3.23 s once circuit opened)
+- The question at which "llm call gemini … error" stopped appearing in the log: number 4
+
+### The bill
+
+- /v1/usage today: calls 15 , errors 4 , fallbacks 4 , cost Rs 0.141913
+- Average per answered question: Rs 0.012901 (my Day 1 target: under Rs 0.50)
+
+### One thing that went wrong today, and how I fixed it
+
+- The default primary model (`gemini-3.8-flash`) returned HTTP 403/503 on my Google AI Studio project, and `tests/unit/conftest.py` shadowed `tests/conftest.py` causing `/v1/chat` unit tests to fail with 503. I switched `LLM_PRIMARY_MODEL` to `gemini-3.5-flash-lite` in `.env` and removed the duplicate `tests/unit/conftest.py` so all 78 unit tests and integration tests pass.
