@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from springscout.api.deps import GatewayDep, UsageDep
+from springscout.api.deps import GatewayDep, SettingsDep, UsageDep
 from springscout.llm.gateway import LLMResult, LLMUnavailable
 
 router = APIRouter(tags=["chat"])
@@ -39,7 +39,24 @@ def summary(result: LLMResult) -> dict:
 
 
 @router.post("/chat")
-async def chat(body: ChatRequest, request: Request, gateway: GatewayDep):
+async def chat(
+    body: ChatRequest,
+    request: Request,
+    gateway: GatewayDep,
+    repo: UsageDep,
+    settings: SettingsDep,
+):
+    if settings.max_daily_cost_inr > 0:
+        spent = await repo.today_cost_inr()
+        if spent >= settings.max_daily_cost_inr:
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"Daily LLM budget exceeded: Rs {spent:.4f} spent of "
+                    f"Rs {settings.max_daily_cost_inr:.2f} limit"
+                ),
+            )
+
     messages = [
         {"role": "system", "content": request.app.state.system_prompt},
         {"role": "user", "content": body.message},
@@ -75,3 +92,11 @@ async def usage(repo: UsageDep, days: Annotated[int, Query(ge=1, le=90)] = 7) ->
     rows = await repo.by_day(days)
     total = round(sum(row["cost_inr"] for row in rows), 4)
     return {"days": rows, "total_cost_inr": total, "calls": sum(row["calls"] for row in rows)}
+
+
+@router.get("/usage/models")
+async def usage_by_model(repo: UsageDep, days: Annotated[int, Query(ge=1, le=90)] = 7) -> dict:
+    """Latency, token efficiency, and rupees per provider and model."""
+    rows = await repo.by_model(days)
+    total = round(sum(row["cost_inr"] for row in rows), 4)
+    return {"models": rows, "total_cost_inr": total, "calls": sum(row["calls"] for row in rows)}
