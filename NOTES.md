@@ -408,3 +408,57 @@ Running `scripts/fetch.py repo` initially failed because the destination directo
 1. **Daily Spend Guardrail (`MAX_DAILY_COST_INR`):** Configurable daily INR cap in `Settings` checked before every `POST /v1/chat` request, returning `HTTP 429` once daily spend reaches the configured threshold (`0.0` = unlimited by default).
 2. **Per-Model & Provider Usage Telemetry (`GET /v1/usage/models`):** Aggregates calls, error counts, fallback counts, average latency (ms), token usage, and INR spend grouped by provider and model.
 3. **CLI Cost & Latency Dashboard (`scripts/usage_report.py`):** Queries `/v1/usage` and `/v1/usage/models` to verify average cost per answered request (`Rs 0.0219`) against the Day 1 target (`<= Rs 0.50: PASS`).
+
+## D09 · Prompt versions compared
+
+<!-- prompts:start -->
+
+| Prompt version | Correct | Accuracy | Invalid replies | Avg tokens in |
+|---|---|---|---|---|
+| classify_v1 | 0/20 | 0% | 19 | 23 |
+| classify_v2 | 19/20 | 95% | 0 | 209 |
+| classify_v3 | 20/20 | 100% | 0 | 365 |
+| classify_v4 | 20/20 | 100% | 0 | 374 |
+
+<!-- prompts:end -->
+
+
+## Day 09 — Prompt Engineering & Structured Extraction
+
+### Router Prompt Progression
+- **v1 (`0/20`, `0%`)**: Answered questions in full sentences instead of a single label (`19` invalid replies) and fell for the prompt injection on line 19 (`got docs`).
+- **v2 (`19/20`, `95%`)**: Fixed output formatting and prompt injection using `<question>` tags, missing only line 14 (`will upgrading our repo from spring boot 3.1 to 3.4 break our custom auth filter` -> predicted `docs` instead of `personal`).
+- **v3 (`20/20`, `100%`)**: Added concrete Spring Boot `docs` and `personal` few-shot examples; resolved line 14 with zero leaks.
+- **v4 (`20/20`, `100%`)**: Tightened the `personal` definition to explicitly cover private repos, custom code/filters, and cluster state; kept `100%` accuracy with lower average input tokens (`374` vs `365`/`209`).
+
+### Metadata Extraction Check (`extract_v1`, `--limit 5`)
+- Ran `uv run python -m springscout.extract_metadata --limit 5` (`ok=5`, `repaired=0`, `failed=0`, `cost=Rs 0.4596`).
+- Verified in Neon SQL Editor: `doc_kind` (`reference`) and `property_name` lists (`spring.profiles.active`, `spring.autoconfigure.exclude`, `logging.include-application-name`) are exact copies from the source docs.
+- Observation: `year` is `null` and `boot_version` is `[]` across all 5 evergreen reference docs because the pages do not explicitly state a publication year or version number, confirming the prompt avoids hallucinating missing metadata.
+
+
+### D09 · Prompts and structured output
+
+- My best router prompt: classify_v4 with 20 / 20
+- What I changed in v4, and what happened to the score: Tightened the `personal` category definition to explicitly mention a user's private repo, custom code/filters, and live cluster state; the score stayed at 20/20 (100%) with zero leaks.
+- The question my best version still gets wrong (line, wanted, got), and why I think so: None (20/20). Earlier, `classify_v2` missed line 14 (`will upgrading our repo from spring boot 3.1 to 3.4 break our custom auth filter` — wanted `personal`, got `docs`) because upgrade questions look like documentation queries until few-shot examples and explicit private-repo rules were added in `v3`/`v4`.
+- A label in my test set that I changed after seeing the results (or "none"): none
+- Input tokens per question: v1 59 , best version 365 (v3) / 374 (v4) . Is the extra accuracy worth it? Yes — `v1` used ~59 input tokens but scored 0/20 (0%) because it generated long conversational replies and fell for the prompt injection on line 19, whereas `v3`/`v4` achieved 100% accuracy and safe one-word outputs at negligible extra input token cost.
+
+### My contract (DocMeta)
+
+- Fields I kept from my project card: `module`, `boot_version`, `property_name`, `old_property`, `annotation`
+- Fields I deleted, and why they make no sense per document: `page` — page numbers identify individual slices/chunks rather than a whole Spring Boot documentation file.
+- The field I tightened, and how: `doc_kind` (`Kind`), tightened with `Literal["reference", "migration_guide", "release_notes", "tutorial", "other"]` to match SpringScout's exact corpus categories.
+
+### Extraction run
+
+- Prompt version: extract_v1 · documents: 173 ok (5 initial + 168 batch), 5 repaired, 0 failed (of 173 parsed)
+- Not finished? Why, and how many are left: Finished all 173 documents with 0 remaining.
+- Most common failure reason, and what I did about it: `0` permanent failures. The most common validation repair was a list exceeding 8 items (`List should have at most 8 items after validation` on `annotation` and `property_name` for `Endpoints`, `Creating Your Own Auto-configuration`, `AMQP`, and `JMS`), plus 1 malformed JSON quote on `Configuration Metadata` — all 5 were automatically fixed by the Pydantic repair loop.
+- A record that was valid but wrong (document, field, what it said, what is true): None found in spot-checks, though evergreen reference pages (`Servlet Web Applications`, `Logging`, `Profiles`) returned `year: null` and `boot_version: []` because the page body omits explicit version/year headers even though they belong to the Spring Boot 3.x docs.
+- Cost at list price: Rs 13.30 in total (`Rs 0.4596` initial 5 + `Rs 12.8377` remaining 168), Rs 0.077 per document
+
+### One thing that went wrong today, and how I fixed it
+
+- `test_doc_meta_is_a_strict_contract` in `tests/unit/test_extract.py` failed with a Pydantic `ValidationError` after I tightened `Kind` in `doc_meta.py`, because the test fixture still passed `"doc_kind": "guideline"`; I updated the test fixture to `"reference"` and all 96 tests passed.
