@@ -503,3 +503,8 @@ Running `scripts/fetch.py repo` initially failed because the destination directo
 - **End-to-end reliability verified:** All **110 unit tests**, pre-commit hooks (`ruff check`, `ruff format`, `detect-secrets`), and `docker compose config` passed with zero errors and zero `.pyc` artifacts.
 - **Crash-recovery & idempotency proven:** Killing the `arq` worker mid-batch (`queued=13, running=2, done=5`) reclaimed both interrupted items after the 60s lock (`INGEST_JOB_TIMEOUT`) expired and completed `20/20` items with `163` distinct `external_id` rows (`0` duplicates, `0` dead-letter items).
 - **Live Render production verified:** Deployed `WORKER_IN_API=true` with managed Redis (`springscout-redis`, Singapore) and `ADMIN_TOKEN` auth; unauthorized `POST /v1/ingest` returns `401` (`application/problem+json`), and authorized ingestion completed `5/5` documents asynchronously (`202 Accepted`) while `/health` and `/v1/documents` stayed responsive.
+
+### Live ingestion
+
+- SpringScout on Render: 5 of 5 documents done, 0 failed (`job_id: 5b0a7ca48e3e462c8cbbd07a2f00682d`, 12 pages in 22 s). The reasons: None (all 5 documents queued via `POST /v1/ingest` on Render completed cleanly).
+- A request without the token gets status 401
