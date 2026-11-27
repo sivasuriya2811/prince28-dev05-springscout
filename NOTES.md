@@ -496,3 +496,10 @@ Running `scripts/fetch.py repo` initially failed because the destination directo
 ### One thing that went wrong today, and how I fixed it
 
 - Unit tests in `test_ingest_api.py` initially failed with `fixture 'queue' not found` because the Day 10 fixtures were saved into `tests/integration/conftest.py` instead of `tests/conftest.py`; I moved the new `FakeQueue` and `FakeIngestRepo` fixtures into `tests/conftest.py` while keeping `FakeUsage.by_model` and `today_cost_inr`, and all 110 unit tests passed.
+
+
+### Production & Architecture Proof (Render + Redis + Postgres)
+
+- **End-to-end reliability verified:** All **110 unit tests**, pre-commit hooks (`ruff check`, `ruff format`, `detect-secrets`), and `docker compose config` passed with zero errors and zero `.pyc` artifacts.
+- **Crash-recovery & idempotency proven:** Killing the `arq` worker mid-batch (`queued=13, running=2, done=5`) reclaimed both interrupted items after the 60s lock (`INGEST_JOB_TIMEOUT`) expired and completed `20/20` items with `163` distinct `external_id` rows (`0` duplicates, `0` dead-letter items).
+- **Live Render production verified:** Deployed `WORKER_IN_API=true` with managed Redis (`springscout-redis`, Singapore) and `ADMIN_TOKEN` auth; unauthorized `POST /v1/ingest` returns `401` (`application/problem+json`), and authorized ingestion completed `5/5` documents asynchronously (`202 Accepted`) while `/health` and `/v1/documents` stayed responsive.
