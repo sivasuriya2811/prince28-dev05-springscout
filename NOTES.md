@@ -462,3 +462,37 @@ Running `scripts/fetch.py repo` initially failed because the destination directo
 ### One thing that went wrong today, and how I fixed it
 
 - `test_doc_meta_is_a_strict_contract` in `tests/unit/test_extract.py` failed with a Pydantic `ValidationError` after I tightened `Kind` in `doc_meta.py`, because the test fixture still passed `"doc_kind": "guideline"`; I updated the test fixture to `"reference"` and all 96 tests passed.
+
+
+### D10 · Queue and worker
+
+- First run: 10 documents queued, finished in 52 s. Done 10 , skipped 0 , failed 0
+- Pace: 5.2 s per document (INGEST_RPM = 12.0 , INGEST_CONCURRENCY = 2 )
+
+### Kill test
+
+- Queued: 20. At the kill: queued 13 , running 2 , done 5 , failed 0
+- After the new worker: done 20 + skipped 0 + failed 0 = 20 (must be 20)
+- Documents in the database: 163 , different ids: 163 (must be equal)
+- The interrupted items came back after ~60 s. Why that long: Their `arq` visibility timeout / job lock (`INGEST_JOB_TIMEOUT = 60` seconds) had to expire before Redis returned those two unacknowledged items to the queue for the replacement worker to claim.
+- Why nothing was doubled (one sentence, in my own words): Every document uses a deterministic SHA-256 `external_id` and idempotent upsert (`ON CONFLICT`), so re-running the two interrupted items updated the existing rows instead of inserting duplicates.
+
+### Dead-letter list
+
+| Stage (parse / extract / download / gave up) | Items | What I did |
+|---|---|---|
+| none (clean run) | 0 | Verified `GET /v1/ingest/dead-letter` returned `{"count": 0, "items": []}` and ran `uv run python scripts/ingest.py --retry-failed` (`Nothing to do: all of it is ingested.`). |
+
+### Live ingestion
+
+- SpringScout on Render: 5 of 5 documents done, 0 failed. The reasons: None (all 5 documents queued via `POST /v1/ingest` on Render completed cleanly).
+- A request without the token gets status 401
+
+### Week 2 against Monday's estimate
+
+- docs/CAPACITY.md said: 678 pages, 508,285 tokens. docs/INGEST_REPORT.md says: 681 pages, 477,786 tokens
+- The difference, and why: Pages differed by only 3 pages (+0.4%) and tokens by -30,499 (-6.0%) because Monday measured 173 raw files on disk using `characters / 4`, whereas today's database holds the 163 distinct ingested documents after deduplicating shared hashes and extracting clean text.
+
+### One thing that went wrong today, and how I fixed it
+
+- Unit tests in `test_ingest_api.py` initially failed with `fixture 'queue' not found` because the Day 10 fixtures were saved into `tests/integration/conftest.py` instead of `tests/conftest.py`; I moved the new `FakeQueue` and `FakeIngestRepo` fixtures into `tests/conftest.py` while keeping `FakeUsage.by_model` and `today_cost_inr`, and all 110 unit tests passed.

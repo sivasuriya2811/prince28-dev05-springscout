@@ -33,6 +33,6 @@ Assumptions: 4 characters per token, 400-token chunks, 768-dimension embeddings 
 
 ## What I conclude
 
-• Question 1 & 2 (check your exact wording at the bottom of docs/CAPACITY.md—typically about storage/embedding cost and latency at 4,000 pages): Scale your 3.4 MB (678 pages) up by ~5.9× (4,000 / 678), giving ~20 MB on disk and ~3.0M tokens.
-• Question 3 ("Which number above am I least sure about, and how will I measure it better?"): The estimated tokens (508,285) because characters / 4 is a rough heuristic for AsciiDoc/code blocks; I will measure it accurately using the actual model tokenizer (tiktoken) during Day 07/08 chunking.
-• Question 4 ("What changes if the corpus grows 10 times?"): Disk size grows to ~34 MB (or ~200 MB at 40,000 pages) and embedding time/API cost scales 10×, requiring batching, incremental manifest-based indexing, and pgvector HNSW/IVFFlat indexing instead of full re-ingestion.
+- **Storage and embedding budget at 4,000 pages:** Scaling our 3.4 MB (678-page) start corpus by 5.9× produces ~20 MB of raw files, ~3.00M tokens (8,625 chunks), 26 MB of vector storage, and 14 MB of Postgres text, with a one-time embedding cost of $0.52 (Rs 49)—well within free-tier database and API budgets.
+- **Least certain estimate and how to measure it:** Estimated tokens (508,285) is the roughest number because `characters / 4` approximates prose rather than dense AsciiDoc tables and Java/YAML configuration snippets; we validate it directly against real token usage tracked in `llm_calls` during ingestion.
+- **What changes if the corpus grows 10× (40,000 pages):** Raw files reach ~200 MB, vector storage grows to ~260 MB, and embedding time/cost scales 10× (~Rs 490), requiring an async background worker queue (`arq` + Redis), rate-limited batching, incremental SHA-256 manifest ingestion, and `pgvector` HNSW indexing.
